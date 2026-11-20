@@ -12,7 +12,7 @@ The repository contains the codes that produced the results of the thesis:
 | `solver/` | Two-dimensional low-Mach reacting-flow solver (laminar opposed-jet diffusion flame, variable density, single global reaction). Pressure solver: production RMT or geometry-aware RMT (RMTA). C, OpenMP. | Chapters 3 and 5 |
 | `include/` | RMT (`rmt_impl.h`) and RMTA (`rmta_impl.h`) pressure solvers, shared by the solver and PBENCH. | Chapter 3 |
 | `pbench/` | Pressure benchmark code (PBENCH): solves stored pressure systems with RMT, RMTA and full-depth classical multigrid (pointwise and line smoother). `mms_gen.c` writes the systems of the MMS study. | Chapters 4 and 5 |
-| `lfa/` | Local Fourier analysis of the red-black Gauss–Seidel smoother. | Chapter 3, Appendix A |
+| `lfa/` | Local Fourier analysis of the red–black Gauss–Seidel smoother: script and description of the method (`lfa/README.md`). | Chapter 3 |
 | `openfoam/` | OpenFOAM v2312 reference case (`rhoReactingFoam`, ideal gas). | Chapter 5 |
 | `scripts/` | Scripts that run the cases, the MMS study and the solver comparison of the thesis. | Chapters 4 and 5 |
 

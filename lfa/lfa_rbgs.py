@@ -1,4 +1,4 @@
-"""Local Fourier analysis of the red-black Gauss-Seidel smoother (thesis Appendix A).
+"""Local Fourier analysis of the red-black Gauss-Seidel smoother (thesis Chapter 3; see README.md).
 
 Computes the smoothing factor of RBGS for the five-point Laplacian with coupling ratio
 c = a_N / a_E (c = 1/9 for cells with dy = 3 dx), coarsening ratios qx, qy and s sweeps,
