@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Opposed-jet flame with OpenFOAM v2312 (rhoReactingFoam, perfectGas), from t = 0 to 2 s.
+# Usage: ./Allrun [M2|M3|M4] [NPROCS]      (defaults: M2, 16 processes)
+# The thesis used M2 (216x72), M3 (432x144) and M4 (864x288) cells with 16 MPI processes.
+set -euo pipefail
+cd "$(dirname "$0")"
+MESH=${1:-M2}
+NPROCS=${2:-16}
+[[ -f system/blockMeshDict.$MESH ]] || { echo "unknown mesh $MESH (use M2, M3 or M4)" >&2; exit 2; }
+for cmd in blockMesh rhoReactingFoam foamDictionary; do
+    command -v "$cmd" >/dev/null 2>&1 || { echo "$cmd not found: load OpenFOAM v2312 first" >&2; exit 127; }
+done
+
+blockMesh -dict system/blockMeshDict.$MESH > log.blockMesh 2>&1
+checkMesh > log.checkMesh 2>&1
+if [[ "$NPROCS" -gt 1 ]]; then
+    foamDictionary -entry numberOfSubdomains -set "$NPROCS" system/decomposeParDict > /dev/null
+    foamDictionary -entry simpleCoeffs/n -set "($NPROCS 1 1)" system/decomposeParDict > /dev/null
+    decomposePar -force > log.decomposePar 2>&1
+    mpirun -np "$NPROCS" rhoReactingFoam -parallel > log.rhoReactingFoam 2>&1
+    reconstructPar > log.reconstructPar 2>&1
+else
+    rhoReactingFoam > log.rhoReactingFoam 2>&1
+fi
+echo "finished: $MESH, latest time $(foamListTimes -latestTime 2>/dev/null | tail -1)"

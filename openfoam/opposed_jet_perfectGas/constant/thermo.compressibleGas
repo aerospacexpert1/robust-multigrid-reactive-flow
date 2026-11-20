@@ -1,0 +1,119 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      thermo.compressibleGas;
+}
+
+// Minimal, mass-balanced 1-step mechanism: 2 F + O -> 2 P
+// Interpreted as: F=CO, O=O2, P=CO2, plus inert N2.
+
+F
+{
+    specie
+    {
+        molWeight   28.0;
+    }
+    equationOfState
+    {
+        rho         1.0;
+    }
+    thermodynamics
+    {
+        Cp          1000;
+        Hf          3.571428571e6;
+    }
+    transport
+    {
+        mu          2e-05;
+        Pr          0.7;
+    }
+    elements
+    {
+        C           1;
+        O           1;
+    }
+}
+
+O
+{
+    specie
+    {
+        molWeight   32.0;
+    }
+    equationOfState
+    {
+        rho         1.0;
+    }
+    thermodynamics
+    {
+        Cp          1000;
+        Hf          0;
+    }
+    transport
+    {
+        mu          2e-05;
+        Pr          0.7;
+    }
+    elements
+    {
+        O           2;
+    }
+}
+
+P
+{
+    specie
+    {
+        molWeight   44.0;
+    }
+    equationOfState
+    {
+        rho         1.0;
+    }
+    thermodynamics
+    {
+        Cp          1000;
+        Hf          0;
+    }
+    transport
+    {
+        mu          2e-05;
+        Pr          0.7;
+    }
+    elements
+    {
+        C           1;
+        O           2;
+    }
+}
+
+N2
+{
+    specie
+    {
+        molWeight   28.0;
+    }
+    equationOfState
+    {
+        rho         1.0;
+    }
+    thermodynamics
+    {
+        Cp          1000;
+        Hf          0;
+    }
+    transport
+    {
+        mu          2e-05;
+        Pr          0.7;
+    }
+    elements
+    {
+        N           2;
+    }
+}
+
+// ************************************************************************* //

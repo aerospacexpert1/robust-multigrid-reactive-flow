@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Removes the mesh, the processor directories, the time directories (except 0) and the logs.
+set -euo pipefail
+cd "$(dirname "$0")"
+rm -rf processor* constant/polyMesh postProcessing log.*
+find . -maxdepth 1 -mindepth 1 -type d ! -name 0 ! -name constant ! -name system -exec rm -rf {} +

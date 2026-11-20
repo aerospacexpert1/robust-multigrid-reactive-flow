@@ -1,0 +1,14 @@
+# build output
+bin/
+*.o
+# run output of the scripts
+runs/
+results/
+*.bin
+# OpenFOAM run output
+openfoam/*/constant/polyMesh/
+openfoam/*/processor*/
+openfoam/*/postProcessing/
+openfoam/*/log.*
+openfoam/*/[1-9]*/
+openfoam/*/0.*/

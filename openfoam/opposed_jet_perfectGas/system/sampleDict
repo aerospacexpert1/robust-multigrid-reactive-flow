@@ -1,0 +1,29 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  Centerline sampling at x=0.01 m, z=0.
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      sampleDict;
+}
+
+setFormat           raw;
+interpolationScheme cellPoint;
+fields              (T F O P N2 p U);
+
+sets
+(
+    verticalCenterline
+    {
+        type        uniform;
+        axis        y;
+        start       (0.01 -0.01 0);
+        end         (0.01  0.01 0);
+        nPoints     401;
+    }
+);
+
+// ************************************************************************* //

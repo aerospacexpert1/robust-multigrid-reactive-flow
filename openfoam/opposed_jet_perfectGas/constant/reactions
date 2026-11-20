@@ -1,0 +1,50 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  v2312
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      reactions;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+// Required by foamChemistryReader:
+// - elements list
+// - species list
+// - reactions dictionary
+
+elements
+(
+    C
+    O
+    N
+);
+
+species
+(
+    F
+    O
+    P
+    N2
+);
+
+reactions
+{
+    simpleReaction
+    {
+        type     irreversibleArrheniusReaction;
+        reaction "2 F + O = 2 P";
+        A        1.0e7;
+        beta     5;
+        Ta       1000;
+    }
+}
+
+// ************************************************************************* //

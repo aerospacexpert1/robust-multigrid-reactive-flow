@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite the thesis below."
+title: "robust-multigrid-reactive-flow: RMT, RMTA and classical multigrid pressure solvers for a structured-grid reacting-flow solver"
+type: software
+authors:
+  - family-names: "Zayıfoğlu"
+    given-names: "Ömer Uğur"
+    affiliation: "Middle East Technical University, Department of Aerospace Engineering"
+license: MIT
+repository-code: "https://github.com/aerospacexpert1/robust-multigrid-reactive-flow"
+preferred-citation:
+  type: thesis
+  thesis-type: "Master's thesis"
+  title: "Application of the Robust Multigrid Technique to a Structured-Grid Reacting-Flow Solver"
+  authors:
+    - family-names: "Zayıfoğlu"
+      given-names: "Ömer Uğur"
+  institution:
+    name: "Middle East Technical University"
+    city: "Ankara"
+    country: "TR"
+  year: 2026

@@ -1,0 +1,36 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  OpenFOAM v2312 - opposed-jet flame, ideal gas (perfectGas), reference case of the thesis
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+
+application     rhoReactingFoam;
+startFrom       startTime;
+startTime       0;
+stopAt          endTime;
+endTime         2.0;
+
+deltaT          1e-7;
+adjustTimeStep  yes;
+maxCo           0.05;
+maxDeltaT       1e-4;
+
+// Fields are written every 0.5 s; the comparison in the thesis uses t = 2 s.
+// continue_to_8s.sh continues a finished run to t = 8 s.
+writeControl    adjustableRunTime;
+writeInterval   0.5;
+purgeWrite      0;
+writeFormat     binary;
+writePrecision  10;
+writeCompression off;
+timeFormat      general;
+timePrecision   8;
+runTimeModifiable true;
+
+// ************************************************************************* //

@@ -1,0 +1,61 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      fvSolution;
+}
+
+solvers
+{
+    #include "fvSolution.solvers"
+}
+
+PIMPLE
+{
+    nOuterCorrectors         1;
+    nCorrectors              2;
+    nNonOrthogonalCorrectors 0;
+
+    momentumPredictor        yes;
+    transonic                no;
+
+    residualControl
+    {
+        p
+        {
+            tolerance      1e-9;
+            relTol         0;
+        }
+
+        U
+        {
+            tolerance      1e-9;
+            relTol         0;
+        }
+
+        h
+        {
+            tolerance      1e-9;
+            relTol         0;
+        }
+
+        "(F|O|P|N2)"
+        {
+            tolerance      1e-9;
+            relTol         0;
+        }
+    }
+}
+
+relaxationFactors
+{
+    fields { p 0.3; }
+    equations
+    {
+        U               0.7;
+        h               0.7;
+        "(F|O|P|N2)"     0.7;
+    }
+}

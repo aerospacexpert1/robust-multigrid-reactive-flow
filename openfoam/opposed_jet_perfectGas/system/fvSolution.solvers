@@ -1,0 +1,101 @@
+rho
+{
+    solver  diagonal;
+}
+rhoFinal
+{
+    $rho;
+    relTol  0;
+}
+
+// ---------------- p: Krylov with Multigrid preconditioning ----------------
+p
+{
+    solver      GAMG;
+
+    // Intermediate correction: cheap is fine
+    tolerance   1e-9;
+    relTol      0.0;
+    maxIter     20;
+
+    smoother    GaussSeidel;
+
+    nPreSweeps      0;
+    nPostSweeps     1;
+    nFinestSweeps   1;
+
+    cacheAgglomeration true;
+    agglomerator    faceAreaPair;
+    mergeLevels     2;
+}
+
+pFinal
+{
+    solver      GAMG;
+
+    // Final correction: allow relative stopping so it doesn't hit maxIter forever
+    tolerance   1e-9;     // or 1e-5 if you still see plateau
+    relTol      0.00;
+    maxIter     50;
+
+    smoother    DICGaussSeidel;
+
+    nPreSweeps      0;
+    nPostSweeps     2;
+    nFinestSweeps   1;
+
+    cacheAgglomeration true;
+    agglomerator    faceAreaPair;
+    mergeLevels     2;
+}
+
+// ---------------- U ----------------
+U
+{
+    solver          PBiCGStab;
+    preconditioner  DILU;
+    tolerance       1e-9;
+    relTol          0.00;
+}
+UFinal
+{
+    $U;
+    relTol          0;
+}
+
+// ---------------- h ----------------
+h
+{
+    solver          PBiCGStab;
+    preconditioner  DILU;
+    tolerance       1e-9;
+    relTol          0.00;
+}
+hFinal
+{
+    $h;
+    relTol          0;
+}
+
+// ---------------- species template (rhoReactingFoam uses Yi keyword) ----------------
+Yi
+{
+    solver          PBiCGStab;
+    preconditioner  DILU;
+    tolerance       1e-9;
+    relTol          0.00;
+}
+YiFinal
+{
+    $Yi;
+    relTol          0;
+}
+
+"(F|O|P|N2)"
+{
+    $Yi;
+}
+"(F|O|P|N2)Final"
+{
+    $YiFinal;
+}

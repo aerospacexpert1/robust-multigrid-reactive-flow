@@ -1,0 +1,25 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  Deterministic x-direction decomposition for 16 MPI rank(s).
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      decomposeParDict;
+}
+
+numberOfSubdomains 16;
+method              simple;
+
+simpleCoeffs
+{
+    n               (16 1 1);
+    delta           0.001;
+}
+
+distributed         no;
+roots               ();
+
+// ************************************************************************* //
