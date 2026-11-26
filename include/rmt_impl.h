@@ -18,6 +18,8 @@
  *     no interpolation) and added in full.
  *
  * Used by solver/opposedflow.c (default build) and pbench/pbench.c (solver "RMT:s=k").
+ * PBENCH solver "RMT:s=k:sm=line" replaces the red-black smoother by zebra x-line
+ * Gauss-Seidel (rmt_v2_smooth_level_line, further reference of the thesis).
  * Thesis: Chapter 3, Section "Robust Multigrid Technique".
  */
 
@@ -290,6 +292,64 @@ static long long rmt_v2_smooth_level(const Grid*g,double*c,const double*rhs,
     return updates;
 }
 
+
+/* Zebra x-line Gauss-Seidel on all shifted grids of one level (PBENCH option sm=line, a further
+   reference of the thesis; not used by the reacting-flow solver).
+   A row j of the fine index space holds sx interleaved x-lines (one per x-offset); each is solved
+   exactly with the Thomas algorithm. Row colour = parity of the coarse row index (j-1)/sy, so the
+   y-neighbours j +- sy of a row have the other colour. This is block (line) ordering aligned with the
+   strong coupling (x), the smoother-side remedy of Martynenko for anisotropic problems. */
+static int g_rmtV2Line = 0;
+static double *g_rmtV2LineS = NULL; static size_t g_rmtV2LineSn = 0;
+static long long rmt_v2_smooth_level_line(const Grid*g,double*c,const double*rhs,
+                                          const RMTV2LevelPlan*p,int sweeps){
+    const int nx=g->Nx,ny=g->Ny,sx=p->sx,sy=p->sy;
+    const size_t n=(size_t)(nx+2)*(size_t)(ny+2);
+    if(g_rmtV2LineSn<n){free(g_rmtV2LineS);g_rmtV2LineS=calloc(n,sizeof(double));g_rmtV2LineSn=n;
+        if(!g_rmtV2LineS)die("alloc line scratch");}
+    double*S=g_rmtV2LineS;
+    int*rows=malloc((size_t)ny*sizeof(int));if(!rows)die("alloc rows");
+    long long updates=0;
+    for(int sw=0;sw<sweeps;++sw)for(int col=0;col<2;++col){
+        int nr=0;for(int j=1;j<=ny;++j)if((((j-1)/sy)&1)==col)rows[nr++]=j;
+#ifdef _OPENMP
+#pragma omp parallel if(nr>8)
+#endif
+        {
+#ifdef _OPENMP
+            const int nth=omp_get_num_threads(),tid=omp_get_thread_num();
+#else
+            const int nth=1,tid=0;
+#endif
+            const int a=(int)((long)nr*tid/nth),e=(int)((long)nr*(tid+1)/nth);
+            for(int i=1;i<=nx;++i){
+                const double aw=p->xM[i],ae=p->xP[i],xap=p->xAp[i];
+                for(int k=a;k<e;++k){
+                    const int j=rows[k];
+                    const double as=p->yM[j],an=p->yP[j];
+                    double r=rhs[IDX(i,j,ny)];
+                    if(as!=0.0)r+=as*c[IDX(i,j-sy,ny)];
+                    if(an!=0.0)r+=an*c[IDX(i,j+sy,ny)];
+                    double cpw=0.0,dpw=0.0;
+                    if(aw!=0.0){cpw=S[IDX(i-sx,j,ny)];dpw=c[IDX(i-sx,j,ny)];}
+                    const double den=xap+p->yAp[j]+aw*cpw;          /* d_i - l_i cp_{i-sx}, l_i = -aw */
+                    S[IDX(i,j,ny)]=-ae/den;             /* cp_i = u_i/den, u_i = -ae */
+                    c[IDX(i,j,ny)]=(r+aw*dpw)/den;      /* dp_i, stored in place */
+                }
+            }
+            for(int i=nx;i>=1;--i){
+                if(i+sx>nx)continue;
+                for(int k=a;k<e;++k){
+                    const int j=rows[k];
+                    c[IDX(i,j,ny)]-=S[IDX(i,j,ny)]*c[IDX(i+sx,j,ny)];
+                }
+            }
+        }
+        updates+=(long long)nr*nx;
+    }
+    free(rows);
+    return updates;
+}
 /* LU factorization with stored pivot sequence. */
 static int rmt_v2_lu_factor(double*A,int*piv,int n){
     for(int k=0;k<n;++k){
@@ -434,7 +494,8 @@ static void rmt_v2_build_correction(const Grid*g,const double*defect,double*c,
         if(lc==w->lm)
             rmt_v2_direct_coarsest(g,c,w->rhsLevel,&w->coarse,&directSolves,&directUnknowns);
         else
-            updates+=rmt_v2_smooth_level(g,c,w->rhsLevel,lp,MAX(1,cfg->smoothSweeps));
+            updates+=g_rmtV2Line ? rmt_v2_smooth_level_line(g,c,w->rhsLevel,lp,MAX(1,cfg->smoothSweeps))
+                                 : rmt_v2_smooth_level(g,c,w->rhsLevel,lp,MAX(1,cfg->smoothSweeps));
     }
 
     g_rmtV2PointUpdatesTotal+=updates;

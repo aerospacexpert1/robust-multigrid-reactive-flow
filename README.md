@@ -11,7 +11,7 @@ The repository contains the codes that produced the results of the thesis:
 |---|---|---|
 | `solver/` | Two-dimensional low-Mach reacting-flow solver (laminar opposed-jet diffusion flame, variable density, single global reaction). Pressure solver: production RMT or geometry-aware RMT (RMTA). C, OpenMP. | Chapters 3 and 5 |
 | `include/` | RMT (`rmt_impl.h`) and RMTA (`rmta_impl.h`) pressure solvers, shared by the solver and PBENCH. | Chapter 3 |
-| `pbench/` | Pressure benchmark code (PBENCH): solves stored pressure systems with RMT, RMTA and full-depth classical multigrid (pointwise and line smoother). `mms_gen.c` writes the systems of the MMS study. | Chapters 4 and 5 |
+| `pbench/` | Pressure benchmark code (PBENCH): solves stored pressure systems with RMT, RMTA and full-depth classical multigrid (pointwise and line smoother), and with the further references (classical multigrid with the RMTA rule, parallel memory operations, RMT with a line smoother, fast direct solver). `mms_gen.c` writes the systems of the MMS study. | Chapters 4 and 5 |
 | `lfa/` | Local Fourier analysis of the red–black Gauss–Seidel smoother: script and description of the method (`lfa/README.md`). | Chapter 3 |
 | `openfoam/` | OpenFOAM v2312 reference case (`rhoReactingFoam`, ideal gas). | Chapter 5 |
 | `scripts/` | Scripts that run the cases, the MMS study and the solver comparison of the thesis. | Chapters 4 and 5 |
@@ -19,6 +19,8 @@ The repository contains the codes that produced the results of the thesis:
 ## Requirements
 
 - C compiler with OpenMP (GCC 12.3 was used), `make`
+- optional: FFTW 3 for the fast direct solver (`make CFLAGS="-O3 -march=native -std=c11 -fopenmp -DHAVE_FFTW" LIBS="-lm -lfftw3"`);
+  without it, PBENCH uses its own mixed-radix FFT, as in the thesis
 - Python 3 with NumPy (only for `lfa/`)
 - OpenFOAM v2312 with MPI (only for `openfoam/`)
 
@@ -56,7 +58,14 @@ bin/pbench_rmta mms.bin cold strict 1000 bench.csv hist.csv "RMTA:s=6"
 ```
 
 The cycle counts are 8 (RMT), 17 (MG2-V), 10 (MG2-V with line smoother) and 10 (RMTA, s = 6),
-as in the cycle-count tables of Chapter 4.
+as in the cycle-count tables of Chapter 4. Three of the further references on the same system:
+
+```
+bin/pbench mms.bin cold strict 1000 bench.csv hist.csv \
+    "MG:r=2:g=1:L=0:c=direct:sc=geo" "RMT:s=8:sm=line" "FFT"
+```
+
+give 8 (MG2-V with the RMTA rule), 7 (RMT with the line smoother, s = 8) and 1 (direct solver).
 
 ## Reproducing the results of the thesis
 
@@ -81,6 +90,16 @@ guess, strict test ‖r‖∞ ≤ 10⁻¹⁰ ‖r₀‖∞. The discretisation e
 `mms_error_*.csv`, the cycle counts and times to `bench_*.csv`, and the residual histories to
 `hist_*.csv`.
 
+The further references of Section 4.7 (classical multigrid with the RMTA rule, parallel memory
+operations, RMT and RMTA with the line smoother, the combined remedies and the fast direct solver,
+with MG2-V and RMTA (s = 6) in the same run) are run with
+
+```
+SOLVERS=further scripts/run_mms_study.sh results/mms 1 16 56
+```
+
+and written to `further_*.csv`.
+
 ### Reacting-flow runs (Chapter 5)
 
 `scripts/run_reacting.sh CASE MESH END [rmt|rmta] [SWEEPS]` runs one case. The cases are
@@ -91,6 +110,7 @@ guess, strict test ‖r‖∞ ≤ 10⁻¹⁰ ‖r₀‖∞. The discretisation e
 | `L1` | as NOM with Pr = Sc = 1 (unity Lewis number, Burke–Schumann test) |
 | `BC1`, `BC3` | inflow speed 0.05 and 0.20 m/s |
 | `S2`, `S3` | A = 10⁸, T_a = 500 K and A = 10⁹, T_a = 100 K |
+| `HQ2`, `HQP` | as NOM with twice the heat of reaction (2 × 10⁸ J/kmol CO) and with the physical value (2.83 × 10⁸ J/kmol CO) |
 
 and the meshes are M1 (108 × 36) to M6 (3456 × 1152), all with Δy = 3Δx.
 The runs of the thesis (table of runs in Chapter 5) are
@@ -103,7 +123,16 @@ The runs of the thesis (table of runs in Chapter 5) are
 | flow-intensity cases, M1–M4 | `scripts/run_reacting.sh BC1 M1 2.001` (and BC3; M2–M4) |
 | nominal case on M5 | `scripts/run_reacting.sh NOM M5 2.001` |
 | nominal case on M6 | `scripts/run_reacting.sh NOM M6 0.1001 rmta 6` |
+| flow-intensity cases on M5 from t = 0 | `scripts/run_reacting.sh BC1 M5 2.001` (and BC3) |
+| larger heat release, M1–M4 | `scripts/run_reacting.sh HQ2 M1 2.001` (and HQP; M2–M4) |
+| nominal case continued to 10 s, M3 and M4 | `RESTART=runs/NOM_M4_rmt16/ckpt/ckpt_864x288_t8.bin CKPT_TIMES=9,10 scripts/run_reacting.sh NOM M4 10.001 rmt 16 runs/SS_NOM_M4` (and M3) |
+| nominal case on M5 from the M4 steady state | `RESTART=runs/NOM_M4_rmt16/ckpt/ckpt_864x288_t8.bin CKPT_TIMES=9,10 scripts/run_reacting.sh NOM M5 10.001 rmt 16 runs/SS_NOM_M5` |
+| time step Δt/2 and Δt/4, M3 | `RESTART=runs/NOM_M3_rmt16/ckpt/ckpt_432x144_t8.bin EXTRA_ARGS="-maxCo 0.025 -maxDi 0.225" scripts/run_reacting.sh NOM M3 14.001 rmt 16 runs/DT2_M3` (Δt/4: `-maxCo 0.0125 -maxDi 0.1125`; the reference run with Δt uses no `EXTRA_ARGS`) |
 | in-solver comparison, M1–M4 | `scripts/run_reacting.sh NOM M1 2.001 rmt 16`, `... rmta 6`, `... rmta 4` |
+
+The continued runs need the checkpoint at t = 8 s of the nominal runs, so run those with
+`CKPT_TIMES=8` (or the list below). In the thesis, the time-step runs were made in two parts,
+8 to 10 s and 10 to 14 s, with an exact restart from the checkpoint at 10 s.
 
 **Recorded pressure systems.** The solver writes the pressure systems (right-hand side and
 initial guesses) used by PBENCH when `PDUMP_STEPS` or `PDUMP_TIMES` is set. The thesis used
@@ -130,7 +159,14 @@ THREADS="1 16 56 112" scripts/run_pbench.sh results/pbench runs/*/dumps
 ```
 
 Every system is solved by the ten configurations with five combinations of initial guess
-(recorded, uniform p₀, zero) and stopping test (production, strict).
+(recorded, uniform p₀, zero) and stopping test (production, strict). The further references of
+Section 5.5.5 were run with
+
+```
+SOLVERS=further THREADS="1 16 56" scripts/run_pbench.sh results/pbench runs/*/dumps
+```
+
+which sets `PBENCH_CT=1024` (cells per thread on the coarse levels with parallel memory operations).
 
 ### OpenFOAM reference (Chapter 5)
 
@@ -155,9 +191,25 @@ The fields along the centerline x = L_x/2 are sampled with `postProcess -func sa
 | MG2-W line (1,1) | `MG:r=2:g=2:L=0:c=direct:sm=line:pre=1:post=1` |
 | MG3-V line (3,3) | `MG:r=3:g=1:L=0:c=direct:sm=line` |
 
+Further references (Sections 4.7 and 5.5.5):
+
+| Name in the thesis | PBENCH solver string |
+|---|---|
+| MG2-V, MG3-V, MG2-W with the RMTA rule | `MG:r=2:g=1:L=0:c=direct:sc=geo`, `MG:r=3:g=1:L=0:c=direct:sc=geo`, `MG:r=2:g=2:L=0:c=direct:sc=geo` |
+| MG2-V with parallel memory operations | `MG:r=2:g=1:L=0:c=direct:cl=1` |
+| MG2-V with the RMTA rule and parallel memory operations | `MG:r=2:g=1:L=0:c=direct:sc=geo:cl=1` |
+| RMT with the line smoother (s = 4, 8, 16) | `RMT:s=4:sm=line`, `RMT:s=8:sm=line`, `RMT:s=16:sm=line` |
+| RMTA with the line smoother (s = 2, 4) | `RMTA:s=2:sm=line`, `RMTA:s=4:sm=line` (with `pbench_rmta`) |
+| RMTA rule with the line smoother | `MG:r=2:g=1:L=0:c=direct:sc=geo:sm=line`, `MG:r=3:g=1:L=0:c=direct:sc=geo:sm=line` |
+| fast direct solver | `FFT` |
+
 The classical multigrid solvers go down to the coarsest admissible grid and solve it with a
 banded Cholesky factorisation; they use three pre- and three post-smoothing sweeps unless
-`pre` and `post` are given.
+`pre` and `post` are given. With `sc=geo`, a level is coarsened only in x while Δy/Δx ≥ √r,
+only in y while Δy/Δx ≤ 1/√r, and in both directions otherwise. With `cl=1`, the zeroing and
+copying of the level arrays is done in parallel, all arrays are first written in parallel, and
+levels with fewer than `PBENCH_CT` cells per thread (environment variable, default 4096) get
+fewer threads; the cycle counts are the same as without `cl=1`.
 
 ## Citation
 

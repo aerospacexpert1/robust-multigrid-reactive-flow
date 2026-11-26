@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # One reacting-flow run of the thesis (Chapter 5).
 # Usage: scripts/run_reacting.sh CASE MESH END_TIME [SOLVER] [SWEEPS] [OUTDIR]
-#   CASE    NOM (nominal, = BC2 = S1), L1 (Pr = Sc = 1, unity Lewis number), BC1, BC3, S2, S3
+#   CASE    NOM (nominal, = BC2 = S1), L1 (Pr = Sc = 1, unity Lewis number), BC1, BC3, S2, S3,
+#           HQ2, HQP (nominal case with twice the heat of reaction and with the physical value)
 #   MESH    M1 (108x36) ... M6 (3456x1152), all with dy = 3 dx
 #   SOLVER  rmt (default, production RMT) or rmta (geometry-aware RMT)
 #   SWEEPS  smoothing sweeps s (default 16 for rmt, 6 for rmta)
 # Threads: OMP_NUM_THREADS (the thesis used 56 threads on one socket).
 # Pressure systems for PBENCH: set PDUMP_STEPS / PDUMP_TIMES (see README); checkpoints: CKPT_TIMES.
+# RESTART=checkpoint continues a run (on a finer mesh with bilinear interpolation); EXTRA_ARGS adds
+# solver options, e.g. EXTRA_ARGS="-maxCo 0.025 -maxDi 0.225" halves the time step (time-step check).
 # Examples:
 #   scripts/run_reacting.sh NOM M2 8.001               # nominal case to the steady state
 #   PDUMP_STEPS=1,2,3,6,12,100,1000,10000 PDUMP_TIMES=0.1,0.2,0.3,0.4,0.5,0.75,1,1.5,2 \
@@ -25,7 +28,9 @@ declare -A CASEARGS=(
  [BC1]="-vFuel 0.05 -vOx -0.05 -Pr 0.7 -Sc 1.0 -A 1e7 -beta 5 -Ta 1000"
  [BC3]="-vFuel 0.20 -vOx -0.20 -Pr 0.7 -Sc 1.0 -A 1e7 -beta 5 -Ta 1000"
  [S2]="-vFuel 0.10 -vOx -0.10 -Pr 0.7 -Sc 1.0 -A 1e8 -beta 5 -Ta 500"
- [S3]="-vFuel 0.10 -vOx -0.10 -Pr 0.7 -Sc 1.0 -A 1e9 -beta 5 -Ta 100")
+ [S3]="-vFuel 0.10 -vOx -0.10 -Pr 0.7 -Sc 1.0 -A 1e9 -beta 5 -Ta 100"
+ [HQ2]="-vFuel 0.10 -vOx -0.10 -Pr 0.7 -Sc 1.0 -A 1e7 -beta 5 -Ta 1000 -HfF 7.142857143e6"
+ [HQP]="-vFuel 0.10 -vOx -0.10 -Pr 0.7 -Sc 1.0 -A 1e7 -beta 5 -Ta 1000 -HfF 1.010714286e7")
 [[ -n "${NX[$MESH]:-}" ]] || { echo "unknown mesh $MESH" >&2; exit 2; }
 [[ -n "${CASEARGS[$CASE]:-}" ]] || { echo "unknown case $CASE" >&2; exit 2; }
 TH=${OMP_NUM_THREADS:-$(nproc)}
@@ -38,5 +43,6 @@ mkdir -p "$OUT"
 export OMP_NUM_THREADS=$TH OMP_DYNAMIC=false OMP_PROC_BIND=${OMP_PROC_BIND:-close} OMP_PLACES=${OMP_PLACES:-cores}
 echo "run $CASE $MESH (${NX[$MESH]}x${NY[$MESH]}) to t=$END with $SOLVER s=$SW, $TH threads -> $OUT"
 "$BIN" -Nx "${NX[$MESH]}" -Ny "${NY[$MESH]}" $COMMON ${CASEARGS[$CASE]} -rmtSweeps "$SW" -end "$END" \
-  -write 1.0 -caseId "${CASE}_${MESH}" -outputDir "$OUT" ${RESTART:+-restart "$RESTART"} > "$OUT/run.log" 2>&1
+  -write "${WRITE:-1.0}" -caseId "${CASE}_${MESH}" -outputDir "$OUT" ${RESTART:+-restart "$RESTART"} \
+  ${EXTRA_ARGS:-} > "$OUT/run.log" 2>&1
 tail -3 "$OUT/run.log"
